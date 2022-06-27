@@ -1,53 +1,23 @@
 mod args;
 use args::Args;
 
+mod combine;
+use combine::{ FloatingImage, ImageDataErrors, Combiner };
+
 use image::{
-    imageops::FilterType::Triangle, io::Reader, DynamicImage, GenericImageView, ImageError,
+    imageops::FilterType::Triangle, io::Reader, DynamicImage, GenericImageView,
     ImageFormat,
 };
 
-#[derive(Debug)]
-enum ImageDataErrors {
-    DifferentImageFormats,
-    BufferTooSmall,
-    UnableToReadImageFromPath(std::io::Error),
-    UnableToFormatImage(String),
-    UnableToDecodeImage(ImageError),
-    UnableToSaveImage(ImageError),
-}
-
-struct FloatingImage {
-    width: u32,
-    height: u32,
-    data: Vec<u8>,
-    name: String,
-}
-
-impl FloatingImage {
-    fn new(width: u32, height: u32, name: String) -> Self {
-        let buffer_capacity = width * height * 4;
-        let buffer = Vec::with_capacity(buffer_capacity.try_into().unwrap());
-        FloatingImage {
-            width,
-            height,
-            data: buffer,
-            name,
-        }
-    }
-    fn set_data(&mut self, data: Vec<u8>) -> Result<(), ImageDataErrors> {
-        if data.len() > self.data.capacity() {
-            return Err(ImageDataErrors::BufferTooSmall);
-        }
-        self.data = data;
-        Ok(())
-    }
-}
 
 fn main() -> Result<(), ImageDataErrors> {
     let args = Args::new();
+    let mut comb = Combiner::new(args.image_1, args.image_2);
+    comb.process_images();
+    
 
-    let (image_1, image_format_1) = find_image_from_path(args.image_1)?;
-    let (image_2, image_format_2) = find_image_from_path(args.image_2)?;
+    let (image_1, image_format_1) = find_image_from_path(comb.image_1)?;
+    let (image_2, image_format_2) = find_image_from_path(comb.image_2)?;
 
     if image_format_1 != image_format_2 {
         return Err(ImageDataErrors::DifferentImageFormats);
